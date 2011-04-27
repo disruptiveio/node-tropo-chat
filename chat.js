@@ -1,3 +1,8 @@
+/**
+ * Tropo Browser <-> Phone chat client. 
+ * @author Michael Mackus
+ */
+
 var http = require('http'),
 	io = require('socket.io'),
 	express = require('express'),
