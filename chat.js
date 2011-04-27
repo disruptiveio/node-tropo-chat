@@ -1,8 +1,3 @@
-/**
- * Tropo Browser <-> Phone chat client. 
- * @author Michael Mackus
- */
-
 var http = require('http'),
 	io = require('socket.io'),
 	express = require('express'),
@@ -154,4 +149,8 @@ server.all('/transcribe', function(req, res) {
 		socket.broadcast({nickname: req.query.caller_id, chat: msgObj.result.transcription});
 		break;
 	}
+});
+// HTTP request for the root of the node.js site, so Monit can properly check the status
+server.all('/', function(req, res) {
+	res.send('<h1>Hello from Express.JS</h1>');
 });
