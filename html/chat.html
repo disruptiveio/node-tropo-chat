@@ -19,7 +19,10 @@
 	$(document).ready(function() {
 		$('#chat').keyup(function(e) {
 			if (e.keyCode == 13) {
-				socket.send({nickname: $('#nickname').val(), chat: $(this).val()});
+				var msgObj = {nickname: $('#nickname').val(), chat: $(this).val()};
+				socket.send(msgObj);
+				msgObj.nickname = 'You';
+				parseMessage(msgObj);
 				$(this).val('');
 			}
 		});
