@@ -1,0 +1,38 @@
+<html>
+<head>
+	<title>Chat Client</title>
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+	<script src="http://web1.disruptive.io:8000/socket.io/socket.io.js"></script> 
+	<script> 
+	function parseMessage(msg) {
+		if (typeof msg == 'string')
+			$('#messages').append('<p>' + msg + '</p>');
+		else
+			$('#messages').append('<p><b>' + msg.nickname + '</b>: '+msg.chat +'</p>');
+	};
+
+	var socket = new io.Socket("web1.disruptive.io", {port: 8000}); 
+	socket.connect();
+	socket.on('connect', function(){ parseMessage('Connected to server.'); }) 
+	socket.on('message', function(msg){ parseMessage(msg); }) 
+
+	$(document).ready(function() {
+		$('#chat').keyup(function(e) {
+			if (e.keyCode == 13) {
+				socket.send({nickname: $('#nickname').val(), chat: $(this).val()});
+				$(this).val('');
+			}
+		});
+	});
+	</script> 
+</head>
+<body>
+<h1>Chat Client</h1>
+<table>
+<tr><th>Name:</th><td><input id="nickname" value="nickname" /></td></tr>
+<tr><th>Chat:</th><td><input id="chat" value="" /></td></tr>
+</table>
+<div id="messages">
+</div>
+</body>
+</html>
