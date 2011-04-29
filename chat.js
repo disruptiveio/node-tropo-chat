@@ -22,18 +22,37 @@ server.listen(8000); // Change this port number to the port you want the app to 
  * allowing one to easily make realtime apps. http://socket.io/
  **/
 var socket = io.listen(server);
+var userlist = {}; // List of users connected to chat, indexed by there node session ids
+// Function to refresh the clients' userlist
+function refreshUsers() {
+	var users = {userlist: []};
+	for (userId in userlist) {
+		users.userlist.push(userlist[userId]);
+	}
+	socket.broadcast(users);
+}
 // Handle client connections to our Socket.IO instance
 socket.on('connection', function(client) {
 	console.log('Client connection.');
 
 	// Notify the other clients
-	client.broadcast("Web client connected.");
+	//client.broadcast("Web client connected.");
 
 	// Handle messages ("chats") from the client
 	client.on('message', function(msg) {
 		console.log(msg); // Log the message
-		client.broadcast(msg); // Broadcast the message to other clients
-		broadcastToCalls(msg); // Broadcast the message to calls
+		if ('connected' in msg) {
+			client.broadcast({announcement: msg.nickname + ' connected.'});
+			userlist[client.sessionId] = msg.nickname;
+			refreshUsers();
+		} else {
+			client.broadcast(msg); // Broadcast the message to other clients
+			broadcastToCalls(msg); // Broadcast the message to calls
+		}
+	});
+	client.on('disconnect', function() {
+		delete userlist[client.sessionId];
+		refreshUsers();
 	});
 
 });
@@ -86,6 +105,7 @@ server.all('/tropo.json', function(req, res) {
 	tropo.on('continue', null, '/wait');
 	tropo.on('incomplete', null, '/wait');
 	tropo.on('error', null, '/wait');
+	tropo.on('hangup', null, '/endcall');
 
 	res.send(TropoJSON(tropo));
 });
@@ -93,20 +113,25 @@ server.all('/tropo.json', function(req, res) {
 server.all('/wait', function(req, res) {
 	var sessionId = req.body.result.sessionId;
 
-	// Start the tropo client's message queue
-	if (typeof tropoClients[sessionId] == 'undefined')
+	if (typeof tropoClients[sessionId] == 'undefined') {
 		tropoClients[sessionId] = []; // Initialize this client's message queue
+		// Update the userlists with the phone number
+		userlist[sessionId] = tropoClientData[sessionId].caller_id;
+		refreshUsers();
+		socket.broadcast({announcement: 'Phone number ' + tropoClientData[sessionId].caller_id + ' connected.'});
+	}
 
 	var tropo = new TropoWebAPI();
 
 	var phoneWaitSay = new Say(phoneWait);
 	var phoneWaitChoices = new Choices('*');
-	tropo.ask(phoneWaitChoices, 100, true, null, 'wait', null, true, phoneWaitSay, 3000, null);
+	tropo.ask(phoneWaitChoices, 100, true, null, 'wait', null, true, phoneWaitSay, 1, null);
 
 	// Tropo events
 	tropo.on('continue', null, '/record');
 	tropo.on('incomplete', null, '/record');
 	tropo.on('error', null, '/wait');
+	tropo.on('hangup', null, '/endcall');
 
 	res.send(TropoJSON(tropo));
 });
@@ -135,13 +160,14 @@ server.all('/record', function(req, res) {
 		var caller_id = tropoClientData[sessionId].caller_id;
 
 		// Record the user
-		tropo.record(1, false, null, choices, null, 5, 60, null, null, "recording", null, say, 5, {url:'http://web1.disruptive.io:9983/transcribe?caller_id=' + caller_id}, null, null, null);
+		tropo.record(1, false, null, choices, null, 5, 60, null, null, "recording", null, say, 5, {url:'http://web1.disruptive.io:8000/transcribe?caller_id=' + caller_id}, null, null, null);
 	}
 
 	// Tropo events
 	tropo.on('continue', null, '/wait');
 	tropo.on('incomplete', null, '/wait');
 	tropo.on('error', null, '/wait');
+	tropo.on('hangup', null, '/endcall');
 
 	res.send(TropoJSON(tropo));
 });
@@ -154,6 +180,15 @@ server.all('/transcribe', function(req, res) {
 		socket.broadcast({nickname: req.query.caller_id, chat: msgObj.result.transcription});
 		break;
 	}
+});
+// End the call, remove this from the userlist
+server.all('/endcall', function(req, res) {
+	var sessionId = req.body.result.sessionId;
+	delete tropoClients[sessionId];
+	delete tropoClientData[sessionId];
+	delete userlist[sessionId];
+	
+	refreshUsers();
 });
 // HTTP request for the root of the node.js site, so Monit can properly check the status
 server.all('/', function(req, res) {
