@@ -30,7 +30,6 @@
 			$('#messages').append('<p>' + msg.announcement + '</p>');
 		} else
 			$('#messages').append('<p><b>' + msg.nickname + '</b>: '+msg.chat +'</p>');
-		$("#messages").attr({ scrollTop: $("#messages").attr("scrollHeight") });
 	};
 
 	var socket = new io.Socket("web1.disruptive.io", {port: 8000}); 
@@ -69,7 +68,6 @@
 			border: 1px solid #acadaf;
 			padding: 10px;
 			float: left;
-			overflow: auto;
 		}
 		#messages p {
 			margin: 0px;
@@ -82,7 +80,6 @@
 			width: 80px;
 			border: 1px solid #acadaf;
 			padding: 5px;
-			overflow: auto;
 		}
 		#userlist ul {
 			list-style: none;
@@ -101,6 +98,10 @@
 	<div id="messages">
 	</div>
 	<div id="userlist">
+		<ul>
+			<li>Mike</li>
+			<li>John Doe</li>
+		</ul>
 	</div>
 	<input id="chat" value="" />
 </div>

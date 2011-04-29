@@ -1,6 +1,8 @@
 /**
  * Tropo Browser <-> Phone chat client. 
  * @author Michael Mackus
+ * 
+ * Original blog post: http://disruptive.io/2011/04/27/tropo-chat-client/
  */
 
 var http = require('http'),
@@ -88,13 +90,19 @@ function broadcastToCalls(msg) {
 var phoneWelcome ="Welcome to the tropo chat demo. Press asterisk to start recording your message, and press pound when you are done. Speak slowly to improve the quality of the transcription.";
 var phoneWait ="http://www.phono.com/audio/holdmusic.mp3";
 var phoneTranscribe = "Say what you would like to chat.";
+var phonoNum=0; // Number of phono clients - phono has long, weird IDs so we refer to phono clients as "phono-x"
 /**
  * Phone call web requests (IVR)
  */
 // Start of IVR (welcome message)
 server.all('/tropo.json', function(req, res) {
 	// Log the phone number for future access
-	tropoClientData[req.body.session.id] = {caller_id: req.body.session.from.id};
+	var callerId = req.body.session.from.id;
+	if (callerId.search('-') > -1) {
+		phonoNum++;
+		callerId = 'phono-'+phonoNum;
+	}
+	tropoClientData[req.body.session.id] = {caller_id: callerId};
 
 	// Instance of the tropo WebAPI object - see www.tropo.com for docs
 	var tropo = new TropoWebAPI();
@@ -184,6 +192,12 @@ server.all('/transcribe', function(req, res) {
 // End the call, remove this from the userlist
 server.all('/endcall', function(req, res) {
 	var sessionId = req.body.result.sessionId;
+	
+	// Check if this is a phono client 
+	if (tropoClientData[sessionId].caller_id.search('phono-') > -1) {
+		phonoNum--;
+	}
+	
 	delete tropoClients[sessionId];
 	delete tropoClientData[sessionId];
 	delete userlist[sessionId];

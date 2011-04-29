@@ -1,0 +1,12 @@
+<html>
+<head>
+	<title>Chat Client</title>
+</head>
+<body>
+<h1>Chat Client</h1>
+<form method="GET" action="chat-client.html">
+<label>Nickname:</label><input name="nickname" vlue="nickname" /><br />
+<input type="submit" value="Enter Chat" />
+</form>
+</body>
+</html>
