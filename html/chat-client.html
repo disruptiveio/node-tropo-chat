@@ -1,0 +1,111 @@
+<html>
+<head>
+	<title>Chat Client</title>
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+	<script src="http://web1.disruptive.io:8000/socket.io/socket.io.js"></script> 
+	<script> 
+	var nickname; // Nickname from $_GET
+	// Function I grabbed from StackOverflow - http://stackoverflow.com/questions/901115/get-querystring-values-in-javascript
+	function getParameterByName( name )
+	{
+	  name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+	  var regexS = "[\\?&]"+name+"=([^&#]*)";
+	  var regex = new RegExp( regexS );
+	  var results = regex.exec( window.location.href );
+	  if( results == null )
+	    return "";
+	  else
+	    return decodeURIComponent(results[1].replace(/\+/g, " "));
+	}
+
+	function parseMessage(msg) {
+		if (typeof msg == 'string')
+			$('#messages').append('<p>' + msg + '</p>');
+		else if ('userlist' in msg) {
+			$('#userlist').html('<ul></ul>');
+			for (userNumber in msg.userlist) {
+				$('#userlist ul').append('<li>'+msg.userlist[userNumber]+'</li>');
+			}
+		} else if ('announcement' in msg) {
+			$('#messages').append('<p>' + msg.announcement + '</p>');
+		} else
+			$('#messages').append('<p><b>' + msg.nickname + '</b>: '+msg.chat +'</p>');
+	};
+
+	var socket = new io.Socket("web1.disruptive.io", {port: 8000}); 
+	socket.connect();
+	socket.on('connect', function(){ parseMessage('Connected to server.'); sendConnectionInfo(); })
+	socket.on('message', function(msg){ parseMessage(msg); })
+
+	function sendConnectionInfo() {
+		if (typeof nickname == 'undefined')
+			nickname = getParameterByName('nickname');
+		var msgObj = {nickname: nickname, connected: true};
+		socket.send(msgObj);
+	}
+	$(document).ready(function() {
+		$('#chat').keyup(function(e) {
+			if (e.keyCode == 13) {
+				if (typeof nickname == 'undefined')
+					nickname = getParameterByName('nickname');
+				var msgObj = {nickname: nickname, chat: $(this).val()};
+				//var msgObj = {nickname: $('#nickname').val(), chat: $(this).val()};
+				socket.send(msgObj);
+				msgObj.nickname = 'You';
+				parseMessage(msgObj);
+				$(this).val('');
+			}
+		});
+	});
+	</script> 
+	<style type="text/css" media="screen">
+		#chat-wrapper {
+			width: 350px;
+		}
+		#messages {
+			height: 200px;
+			width: 230px;
+			border: 1px solid #acadaf;
+			padding: 10px;
+			float: left;
+			overflow: auto;
+		}
+		#messages p {
+			margin: 0px;
+			padding: 0px;
+			margin-bottom: 5px;
+		}
+		#userlist {
+			height: 210px;
+			float: right;
+			width: 80px;
+			border: 1px solid #acadaf;
+			padding: 5px;
+			overflow: auto;
+		}
+		#userlist ul {
+			list-style: none;
+			margin: 0px;
+			padding: 0px;
+		}
+		#chat {
+			width: 100%;
+			clear: both;
+		}
+	</style>
+</head>
+<body>
+<h1>Chat Client</h1>
+<div id="chat-wrapper">
+	<div id="messages">
+	</div>
+	<div id="userlist">
+		<ul>
+			<li>Mike</li>
+			<li>John Doe</li>
+		</ul>
+	</div>
+	<input id="chat" value="" />
+</div>
+</body>
+</html>
